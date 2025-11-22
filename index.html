@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="h-full dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>冗余数据的最后一次握手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-color: #f8fafc; /* Light Mode: slate-50 */
+        --crt-shadow: rgba(148, 163, 184, 0.2); /* Light Mode Vignette: subtle slate */
+        --scanline-color: rgba(0, 0, 0, 0.03); /* Light Mode Scanlines: very faint */
+      }
+      .dark {
+        --bg-color: #020617; /* Dark Mode: slate-950 */
+        --crt-shadow: rgba(0, 0, 0, 0.9); /* Dark Mode Vignette: heavy black */
+        --scanline-color: rgba(0, 0, 0, 0.2); /* Dark Mode Scanlines: standard */
+      }
+
+      html, body {
+        height: 100%;
+      }
+      body {
+        font-family: 'Noto Sans SC', sans-serif;
+        background-color: var(--bg-color); 
+        overflow: hidden; 
+        cursor: none; /* Hide default cursor for custom one */
+        transition: background-color 0.5s ease;
+      }
+      
+      .font-tech {
+        font-family: 'Share Tech Mono', monospace;
+      }
+      .font-sci {
+        font-family: 'Orbitron', sans-serif;
+      }
+      /* Custom scrollbar for webkit */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a;
+      }
+      .dark ::-webkit-scrollbar-track {
+        background: #0f172a;
+      }
+      :not(.dark) ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 3px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #334155;
+      }
+      :not(.dark) ::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #10b981;
+      }
+      @keyframes heartbeat {
+        0%, 100% { transform: scale(1); opacity: 0.5; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+      }
+      .animate-heartbeat {
+        animation: heartbeat 3s infinite ease-in-out;
+      }
+      .animate-glitch {
+        animation: glitch 1s linear infinite;
+      }
+      @keyframes glitch {
+        2%, 64% { transform: translate(2px,0) skew(0deg); }
+        4%, 60% { transform: translate(-2px,0) skew(0deg); }
+        62% { transform: translate(0,0) skew(5deg); }
+      }
+
+      /* Non-linear Bio Entry Animation */
+      @keyframes bioEntry {
+        0% { opacity: 0; transform: translateY(20px) scale(0.98); filter: blur(4px); }
+        50% { opacity: 1; transform: translateY(-2px) scale(1.005); filter: blur(0); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      .animate-bio-entry {
+        /* cubic-bezier for overshoot/snap effect */
+        animation: bioEntry 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+      }
+
+      /* 3D File Flip Animation */
+      @keyframes fileFlipIn {
+        0% { opacity: 0; transform: perspective(1500px) rotateX(20deg) scale(0.9) translateY(40px); }
+        100% { opacity: 1; transform: perspective(1500px) rotateX(0deg) scale(1) translateY(0); }
+      }
+      @keyframes fileFlipOut {
+        0% { opacity: 1; transform: perspective(1500px) rotateX(0deg) scale(1) translateY(0); }
+        100% { opacity: 0; transform: perspective(1500px) rotateX(10deg) scale(0.95) translateY(20px); }
+      }
+      
+      /* Ensure custom cursor sits on top */
+      #cursor-root {
+        pointer-events: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 9999;
+      }
+
+      /* CRT Effects */
+      .scanlines {
+        background: linear-gradient(
+          to bottom,
+          rgba(255,255,255,0),
+          rgba(255,255,255,0) 50%,
+          var(--scanline-color) 50%,
+          var(--scanline-color)
+        );
+        background-size: 100% 4px;
+        transition: background 0.5s ease;
+      }
+      
+      .crt-flicker {
+        animation: flicker 0.15s infinite;
+      }
+      
+      @keyframes flicker {
+        0% { opacity: 0.03; }
+        5% { opacity: 0.05; }
+        10% { opacity: 0.03; }
+        15% { opacity: 0.06; }
+        20% { opacity: 0.04; }
+        50% { opacity: 0.05; }
+        80% { opacity: 0.03; }
+        100% { opacity: 0.04; }
+      }
+
+      .crt-curvature {
+        box-shadow: inset 0 0 100px var(--crt-shadow);
+        transition: box-shadow 0.5s ease;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root" class="h-full"></div>
+    <div id="cursor-root"></div>
+  </body>
+</html>
